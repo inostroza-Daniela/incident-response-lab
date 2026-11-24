@@ -28,7 +28,7 @@ Las reglas propias (`[irlab] ...`) disparando en tiempo real sobre la telemetrí
 
 ![Eventos de detección en el dashboard, con las reglas irlab, su nivel y su ID](docs/img/dashboard-eventos.png)
 
-📹 **Recorrido en video** (qué es, para qué sirve y cómo funciona): [ver el video explicativo](docs/media/incident-response-lab.mp4).
+ **Recorrido en video** (qué es, para qué sirve y cómo funciona): [ver el video explicativo](docs/media/incident-response-lab.mp4).
 
 ## Arquitectura
 
