@@ -1,0 +1,14 @@
+# Requiere una StorageClass que soporte ReadWriteMany (p. ej. NFS).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: irlab-alertas
+  namespace: irlab
+  labels:
+    app.kubernetes.io/part-of: incident-response-lab
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi

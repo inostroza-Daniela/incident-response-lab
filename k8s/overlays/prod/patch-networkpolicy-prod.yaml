@@ -1,0 +1,47 @@
+# Prod: egress deny-all de la base se mantiene; se reducen las excepciones.
+# DNS solo hacia los pods de CoreDNS y dashboard solo alcanzable desde operador.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: irlab
+  annotations:
+    irlab.local/egress-policy: "deny-all-except-explicit"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-kube-system
+  namespace: irlab
+spec:
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wazuh-dashboard-network
+  namespace: irlab
+spec:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: irlab
+          podSelector:
+            matchLabels:
+              app: operador
+      ports:
+        - protocol: TCP
+          port: 5601

@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: irlab
+resources:
+  - namespace.yaml
+  - networkpolicy.yaml
+  - configmap-indexer.yml
+  - configmap-internal-users.yml
+  - configmap-dashboard-opensearch.yml
+  - configmap-dashboard-wazuh.yml
+  - configmap-agent-ossec.yml
+  - configmap-auditd-rules.yml
+  - secret-certs.yaml
+  - secret-credentials.yaml
+  - pvc-indexer.yaml
+  - pvc-manager.yaml
+  - pvc-telemetria.yaml
+  - pvc-alertas.yaml
+  - deployment-indexer.yaml
+  - deployment-manager.yaml
+  - deployment-dashboard.yaml
+  - job-init-telemetria.yaml
+  - deployment-nodo-monitoreado.yaml
+  - deployment-operador.yaml
+  - service-indexer.yaml
+  - service-manager.yaml
+  - service-dashboard.yaml

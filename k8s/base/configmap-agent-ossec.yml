@@ -1,0 +1,49 @@
+# Contenido copiado literalmente de config/wazuh/agent/ossec.conf.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: irlab-agent-ossec-config
+  namespace: irlab
+  labels:
+    app: nodo-monitoreado
+    app.kubernetes.io/part-of: incident-response-lab
+data:
+  ossec.conf: |
+    <ossec_config>
+      <client>
+        <server>
+          <address>wazuh.manager</address>
+          <port>1514</port>
+          <protocol>tcp</protocol>
+        </server>
+        <crypto_method>aes</crypto_method>
+        <notify_time>10</notify_time>
+        <time-reconnect>60</time-reconnect>
+        <auto_restart>yes</auto_restart>
+      </client>
+
+      <!-- Telemetría del laboratorio: el operador escribe aquí los eventos
+           normalizados (esquema del repo de reglas) envueltos en el espacio de
+           nombres irlab, y el agente los envía al manager como JSON. -->
+      <localfile>
+        <log_format>json</log_format>
+        <location>/var/log/lab/telemetria.jsonl</location>
+      </localfile>
+
+      <!-- auditd del nodo monitoreado. Ilustrativo: auditd necesita el subsistema de
+           auditoría del kernel del host y no corre dentro de un contenedor, así que
+           en el laboratorio contenedorizado este localfile no produce eventos; la
+           detección entra por la telemetría JSON de arriba. La política
+           (/etc/audit/rules.d/irlab.rules, la misma del repo de detección) y este
+           bloque quedan listos para desplegar el agente sobre un host real. -->
+      <localfile>
+        <log_format>audit</log_format>
+        <location>/var/log/audit/audit.log</location>
+      </localfile>
+
+      <syscheck>
+        <disabled>no</disabled>
+        <frequency>43200</frequency>
+        <directories check_all="yes" realtime="yes">/etc/systemd/system,/etc/cron.d</directories>
+      </syscheck>
+    </ossec_config>
