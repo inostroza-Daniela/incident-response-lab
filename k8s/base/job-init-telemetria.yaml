@@ -1,0 +1,35 @@
+# Se ejecuta una sola vez, antes del agente, para que el logcollector siga el
+# archivo desde la primera línea (igual que en docker-compose).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-telemetria
+  namespace: irlab
+  labels:
+    app: init-telemetria
+    app.kubernetes.io/part-of: incident-response-lab
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: init-telemetria
+        app.kubernetes.io/part-of: incident-response-lab
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init-telemetria
+          image: wazuh/wazuh-agent:4.14.9
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - "touch /var/log/lab/telemetria.jsonl && chmod 644 /var/log/lab/telemetria.jsonl"
+          volumeMounts:
+            - name: telemetria
+              mountPath: /var/log/lab
+      volumes:
+        - name: telemetria
+          persistentVolumeClaim:
+            claimName: irlab-telemetria

@@ -1,0 +1,80 @@
+# El initContainer reproduce el `depends_on: service_completed_successfully`
+# de docker-compose: espera a que el Job init-telemetria haya creado el archivo.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodo-monitoreado
+  namespace: irlab
+  labels:
+    app: nodo-monitoreado
+    app.kubernetes.io/name: incident-response-lab
+    app.kubernetes.io/component: agent
+  annotations:
+    irlab.local/depends-on-job: "init-telemetria"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodo-monitoreado
+  template:
+    metadata:
+      labels:
+        app: nodo-monitoreado
+        app.kubernetes.io/name: incident-response-lab
+        app.kubernetes.io/component: agent
+    spec:
+      initContainers:
+        - name: wait-for-telemetria
+          image: wazuh/wazuh-agent:4.14.9
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - "until test -f /var/log/lab/telemetria.jsonl; do sleep 2; done"
+          volumeMounts:
+            - name: telemetria
+              mountPath: /var/log/lab
+      containers:
+        - name: nodo-monitoreado
+          image: wazuh/wazuh-agent:4.14.9
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: WAZUH_MANAGER
+              value: "wazuh.manager"
+            - name: WAZUH_AGENT_NAME
+              value: "nodo-monitoreado"
+            - name: WAZUH_AGENT_GROUP
+              value: "default"
+          ports:
+            - name: agents
+              containerPort: 1514
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: telemetria
+              mountPath: /var/log/lab
+            - name: ossec-config
+              mountPath: /var/ossec/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
+            - name: auditd-rules
+              mountPath: /etc/audit/rules.d/irlab.rules
+              subPath: irlab.rules
+              readOnly: true
+      volumes:
+        - name: telemetria
+          persistentVolumeClaim:
+            claimName: irlab-telemetria
+        - name: ossec-config
+          configMap:
+            name: irlab-agent-ossec-config
+        - name: auditd-rules
+          configMap:
+            name: irlab-auditd-rules

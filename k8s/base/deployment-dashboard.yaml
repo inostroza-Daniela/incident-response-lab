@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+  labels:
+    app: wazuh-dashboard
+    app.kubernetes.io/name: incident-response-lab
+    app.kubernetes.io/component: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-dashboard
+  template:
+    metadata:
+      labels:
+        app: wazuh-dashboard
+        app.kubernetes.io/name: incident-response-lab
+        app.kubernetes.io/component: dashboard
+    spec:
+      containers:
+        - name: wazuh-dashboard
+          image: wazuh/wazuh-dashboard:4.14.9
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DASHBOARD_USERNAME
+              value: "kibanaserver"
+            - name: DASHBOARD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: irlab-credentials
+                  key: DASHBOARD_PASSWORD
+            - name: WAZUH_API_URL
+              value: "https://wazuh.manager"
+            - name: API_USERNAME
+              value: "wazuh-wui"
+            - name: API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: irlab-credentials
+                  key: API_PASSWORD
+          ports:
+            - name: https
+              containerPort: 5601
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: certs
+              mountPath: /usr/share/wazuh-dashboard/certs
+              readOnly: true
+            - name: opensearch-config
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+              readOnly: true
+            - name: wazuh-config
+              mountPath: /usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+              subPath: wazuh.yml
+              readOnly: true
+      volumes:
+        - name: certs
+          secret:
+            secretName: irlab-certs
+            items:
+              - key: wazuh.dashboard.pem
+                path: wazuh-dashboard.pem
+              - key: wazuh.dashboard-key.pem
+                path: wazuh-dashboard-key.pem
+              - key: root-ca.pem
+                path: root-ca.pem
+        - name: opensearch-config
+          configMap:
+            name: irlab-dashboard-opensearch-config
+        - name: wazuh-config
+          configMap:
+            name: irlab-dashboard-wazuh-config

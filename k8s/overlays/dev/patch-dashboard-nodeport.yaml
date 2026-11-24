@@ -1,0 +1,14 @@
+# Dev: acceso al dashboard desde el host (sustituye el bind 127.0.0.1 del Compose).
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+spec:
+  type: NodePort
+  ports:
+    - name: https
+      protocol: TCP
+      port: 5601
+      targetPort: 5601
+      nodePort: 30443

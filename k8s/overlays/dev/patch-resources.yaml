@@ -1,0 +1,71 @@
+# Dev: heap del indexer a 512m/512m y sin límites de recursos (para laptops).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-indexer
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-indexer
+          env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-manager
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-manager
+          resources:
+            limits: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-dashboard
+          resources:
+            limits: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodo-monitoreado
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: nodo-monitoreado
+          resources:
+            limits: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operador
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: operador
+          resources:
+            limits: null

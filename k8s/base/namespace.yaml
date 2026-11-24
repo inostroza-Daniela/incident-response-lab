@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: irlab
+  labels:
+    name: irlab
+    app.kubernetes.io/name: incident-response-lab

@@ -1,0 +1,33 @@
+# Staging: exposición controlada del dashboard.
+# NOTA de autenticación básica: se espera el Secret `irlab-dashboard-basic-auth`
+# con la clave `auth` en formato htpasswd. Crearlo antes de aplicar:
+#   htpasswd -c auth admin
+#   kubectl create secret generic irlab-dashboard-basic-auth --from-file=auth -n irlab
+# Cambiar el host por el real del entorno de staging. Requiere ingress-nginx.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: irlab-dashboard-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "IRLab staging - autenticacion requerida"
+spec:
+  tls:
+    - hosts:
+        - irlab-staging.example.internal
+      secretName: irlab-dashboard-tls
+  rules:
+    - host: irlab-staging.example.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wazuh-dashboard
+                port:
+                  number: 5601

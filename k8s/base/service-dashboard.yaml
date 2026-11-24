@@ -1,0 +1,19 @@
+# Interno por defecto: equivale al bind 127.0.0.1:8443 del docker-compose.
+# El overlay dev lo cambia a NodePort y staging lo expone con Ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+  labels:
+    app: wazuh-dashboard
+    app.kubernetes.io/part-of: incident-response-lab
+spec:
+  type: ClusterIP
+  selector:
+    app: wazuh-dashboard
+  ports:
+    - name: https
+      protocol: TCP
+      port: 5601
+      targetPort: 5601

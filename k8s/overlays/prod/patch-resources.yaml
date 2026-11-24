@@ -1,0 +1,93 @@
+# Prod: recursos completos (requests + limits) y heap del indexer 1g/1g.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-indexer
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-indexer
+          env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-manager
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-manager
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-dashboard
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodo-monitoreado
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: nodo-monitoreado
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operador
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: operador
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
