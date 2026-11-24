@@ -1,0 +1,163 @@
+# Laboratorio de respuesta a incidentes. Entorno aislado de uso en laboratorio:
+# no exponer a internet ni apuntar a sistemas de terceros. Todas las imágenes
+# están fijadas a 4.14.9, la primera serie estable con imagen oficial linux/arm64
+# del manager, el indexer, el dashboard y el agente (verificado en Docker Hub).
+name: irlab
+
+# Los certificados internos se generan con OpenSSL en el host (`make certs`,
+# scripts/generar-certs.sh), sin depender de descargas en tiempo de ejecución.
+
+services:
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:4.14.9
+    hostname: wazuh.indexer
+    restart: unless-stopped
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    volumes:
+      - irlab_indexer_data:/var/lib/wazuh-indexer
+      - ./config/wazuh/certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.pem:ro
+      - ./config/wazuh/certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.key:ro
+      - ./config/wazuh/certs/admin.pem:/usr/share/wazuh-indexer/certs/admin.pem:ro
+      - ./config/wazuh/certs/admin-key.pem:/usr/share/wazuh-indexer/certs/admin-key.pem:ro
+      - ./config/wazuh/certs/root-ca.pem:/usr/share/wazuh-indexer/certs/root-ca.pem:ro
+      - ./config/wazuh/indexer/wazuh.indexer.yml:/usr/share/wazuh-indexer/opensearch.yml:ro
+      - ./config/wazuh/indexer/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml:ro
+    networks:
+      - irlab
+
+  wazuh.manager:
+    image: wazuh/wazuh-manager:4.14.9
+    hostname: wazuh.manager
+    restart: unless-stopped
+    depends_on:
+      - wazuh.indexer
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=${INDEXER_PASSWORD:-LabIrlab2026+}
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=${API_PASSWORD:-LabIrlabApi2026+}
+    volumes:
+      - irlab_manager_data:/var/ossec/data
+      - irlab_alertas:/var/ossec/logs/alerts
+      - ./config/wazuh/certs/root-ca.pem:/etc/ssl/root-ca.pem:ro
+      - ./config/wazuh/certs/wazuh.manager.pem:/etc/ssl/filebeat.pem:ro
+      - ./config/wazuh/certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key:ro
+    networks:
+      - irlab
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:4.14.9
+    hostname: wazuh.dashboard
+    restart: unless-stopped
+    depends_on:
+      - wazuh.indexer
+    # Único puerto publicado, solo en loopback: el dashboard nunca sale a la red.
+    ports:
+      - "127.0.0.1:8443:5601"
+    environment:
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-LabIrlabKibana2026+}
+      - WAZUH_API_URL=https://wazuh.manager
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=${API_PASSWORD:-LabIrlabApi2026+}
+    volumes:
+      - ./config/wazuh/certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem:ro
+      - ./config/wazuh/certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem:ro
+      - ./config/wazuh/certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem:ro
+      - ./config/wazuh/dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml:ro
+      - ./config/wazuh/dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml:ro
+    networks:
+      # irlab (interna) para hablar con el indexer; expuesta (bridge) solo para
+      # que el puerto publicado sea alcanzable desde el host. El resto de los
+      # servicios queda únicamente en la red interna.
+      - irlab
+      - expuesta
+
+  # Crea el archivo de telemetría vacío en el volumen compartido antes de que
+  # arranque el agente. Así el logcollector empieza a seguirlo desde la primera
+  # línea; si el archivo apareciera después, el agente se posicionaría al final y
+  # perdería el primer lote de eventos. Reusa la imagen del agente (ya fijada),
+  # corre una sola vez y termina.
+  init-telemetria:
+    image: wazuh/wazuh-agent:4.14.9
+    hostname: init-telemetria
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["touch /var/log/lab/telemetria.jsonl && chmod 644 /var/log/lab/telemetria.jsonl"]
+    restart: "no"
+    volumes:
+      - irlab_telemetria:/var/log/lab
+    networks:
+      - irlab
+
+  # Nodo Linux monitoreado: agente Wazuh + política auditd. Vigila el archivo de
+  # telemetría del laboratorio y lo envía al manager.
+  nodo-monitoreado:
+    image: wazuh/wazuh-agent:4.14.9
+    hostname: nodo-monitoreado
+    restart: unless-stopped
+    depends_on:
+      wazuh.manager:
+        condition: service_started
+      init-telemetria:
+        condition: service_completed_successfully
+    environment:
+      - WAZUH_MANAGER=wazuh.manager
+      - WAZUH_AGENT_NAME=nodo-monitoreado
+      - WAZUH_AGENT_GROUP=default
+    volumes:
+      - irlab_telemetria:/var/log/lab
+      - ./config/wazuh/agent/ossec.conf:/wazuh-config-mount/etc/ossec.conf:ro
+      - ./config/auditd/irlab.rules:/etc/audit/rules.d/irlab.rules:ro
+    networks:
+      - irlab
+
+  # Nodo operador: desde aquí se lanzan las simulaciones. Escribe la telemetría
+  # en el volumen compartido que vigila el nodo monitoreado y lee las alertas
+  # del manager para verificar. No tiene acceso a internet (red interna).
+  operador:
+    build:
+      context: .
+      dockerfile: config/operador/Dockerfile
+    image: irlab-operador:0.1.0
+    hostname: operador
+    depends_on:
+      - nodo-monitoreado
+    working_dir: /lab
+    command: ["sleep", "infinity"]
+    environment:
+      - PYTHONPATH=/lab/src:/lab
+      - IRLAB_RAIZ=/lab
+      - IRLAB_TELEMETRIA=/var/log/lab/telemetria.jsonl
+      - IRLAB_ALERTAS=/alertas/alerts.json
+      - IRLAB_SITIO=/lab/site
+    volumes:
+      - ./:/lab
+      - irlab_telemetria:/var/log/lab
+      - irlab_alertas:/alertas:ro
+    networks:
+      - irlab
+
+networks:
+  # Red del laboratorio: sin salida a internet. Por aquí va todo el tráfico del
+  # lab (agente ↔ manager ↔ indexer, telemetría).
+  irlab:
+    driver: bridge
+    internal: true
+  # Red mínima solo para publicar el dashboard hacia el host (127.0.0.1:8443).
+  expuesta:
+    driver: bridge
+
+volumes:
+  irlab_indexer_data:
+  irlab_manager_data:
+  irlab_telemetria:
+  irlab_alertas:
