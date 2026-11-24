@@ -317,9 +317,7 @@ def convertir(coleccion: SigmaCollection) -> ResultadoConversion:
         nombre = correlacion.name or ""
         nivel = NIVEL_WAZUH[correlacion.level.name.lower()] if correlacion.level else 7
         tecnicas = _tecnicas(correlacion)
-        rw = _regla_correlacion(
-            correlacion, sid, nivel, tecnicas, sids_por_nombre, info_corr
-        )
+        rw = _regla_correlacion(correlacion, sid, nivel, tecnicas, sids_por_nombre, info_corr)
         reglas.append(rw)
         sids_por_nombre[nombre] = [sid]
         mapa[nombre] = {
@@ -416,9 +414,7 @@ def _regla_correlacion(
         if previa in info_corr:
             rw.if_matched_sid = info_corr[previa]["base_sid"]
             rw.frecuencia = info_corr[previa]["frecuencia"]
-            rw.same_field = info_corr[previa]["same_field"] or (
-                group_by[0] if group_by else None
-            )
+            rw.same_field = info_corr[previa]["same_field"] or (group_by[0] if group_by else None)
         else:
             rw.if_matched_sid = sids_por_nombre[previa][0]
             rw.frecuencia = 2
