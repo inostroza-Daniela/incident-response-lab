@@ -18,6 +18,18 @@ Es un entorno cerrado de defensa y aprendizaje, **no una herramienta ofensiva**.
 > de Docker sin salida a internet. Las credenciales son de ejemplo, solo para el
 > lab. No usar contra sistemas de terceros ni en producción.
 
+## El laboratorio en acción
+
+El SIEM detectando las simulaciones y mapeándolas a **MITRE ATT&CK**:
+
+![Panel MITRE ATT&CK del dashboard de Wazuh con las detecciones del laboratorio](docs/img/dashboard-mitre.png)
+
+Las reglas propias (`[irlab] ...`) disparando en tiempo real sobre la telemetría generada:
+
+![Eventos de detección en el dashboard, con las reglas irlab, su nivel y su ID](docs/img/dashboard-eventos.png)
+
+📹 **Recorrido en video** (qué es, para qué sirve y cómo funciona): [ver el video explicativo](docs/media/incident-response-lab.mp4).
+
 ## Arquitectura
 
 ```
@@ -41,7 +53,7 @@ Apple Silicon y en un host amd64.
 
 ```bash
 cp .env.example .env
-python scripts/obtener-reglas.py   # descarga las reglas del repo de detección
+python3 scripts/obtener-reglas.py  # descarga las reglas del repo de detección
 make certs                         # certificados internos (una sola vez)
 make up                            # levanta la topología
 make load-rules                    # convierte y carga las reglas en el manager
