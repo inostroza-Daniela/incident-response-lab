@@ -110,6 +110,10 @@ depender de Docker.
 - Soporte de Windows/Sysmon (hoy el laboratorio es Linux primero).
 - Ejecución opcional de simulaciones benignas directamente sobre el nodo
   monitoreado para producir telemetría auditd nativa.
+- Distribuir los timestamps de la telemetría en una ventana de tiempo realista.
+  Hoy las simulaciones se corren en bloque y el manager fecha cada alerta con su
+  hora de ingesta, así que las alertas quedan con una hora muy parecida; en un
+  despliegue real llegarían a medida que ocurren los ataques.
 
 ## Reglas de detección
 
