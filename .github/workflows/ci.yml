@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  calidad:
+    name: Lint, tipos y pruebas
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Instalar el paquete y herramientas de desarrollo
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+
+      # Obligatorio: sin las reglas no corren los tests de conversión ni el
+      # emulador de Wazuh, que son la garantía de corrección de la detección.
+      - name: Descargar las reglas del repo de detección
+        run: python scripts/obtener-reglas.py
+
+      # Opcional: el motor del repo de detección agrega un cross-check extra. Si
+      # la instalación falla (red), esos tests se saltan, pero los de conversión
+      # ya cubren la corrección sin depender de esto.
+      - name: Instalar el verificador (motor del repo de detección)
+        continue-on-error: true
+        run: pip install -e ".[verificacion]"
+
+      - name: Lint y formato (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Tipos (mypy)
+        run: mypy
+
+      - name: Pruebas
+        run: pytest -q --cov=irlab --cov=simulations
+
+  validar-topologia:
+    name: Validar docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar la sintaxis del compose
+        run: docker compose config --quiet && echo "compose válido"
+
+  validar-yaml:
+    name: Validar YAML de configuración
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Comprobar que los YAML de config cargan
+        run: |
+          python - <<'PY'
+          import glob, yaml, sys
+          fallos = []
+          for f in glob.glob("config/**/*.yml", recursive=True):
+              try:
+                  list(yaml.safe_load_all(open(f)))
+              except yaml.YAMLError as e:
+                  fallos.append(f"{f}: {e}")
+          if fallos:
+              print("\n".join(fallos)); sys.exit(1)
+          print("YAML de config OK")
+          PY

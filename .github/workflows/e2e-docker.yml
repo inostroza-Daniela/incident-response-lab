@@ -1,0 +1,58 @@
+name: E2E Docker
+
+# El end-to-end levanta todo el stack de Wazuh (manager + indexer + dashboard +
+# agente), carga las reglas y corre las simulaciones contra el SIEM real. Es
+# pesado (Wazuh pide ~8 GB de RAM) y lento, así que se ejecuta a demanda, no en
+# cada push, para que el CI principal se mantenga rápido y en verde.
+on:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Topología + simulaciones de extremo a extremo
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Preparar reglas y certificados
+        run: |
+          python scripts/obtener-reglas.py
+          cp .env.example .env
+          # vm.max_map_count que exige el indexer (OpenSearch)
+          sudo sysctl -w vm.max_map_count=262144
+          bash scripts/generar-certs.sh
+
+      - name: Levantar la topología
+        run: docker compose up -d --build
+
+      - name: Esperar a que el manager esté listo
+        run: |
+          for i in $(seq 1 40); do
+            if docker compose exec -T wazuh.manager /var/ossec/bin/wazuh-control status \
+               | grep -q "wazuh-analysisd is running"; then
+              echo "manager listo"; exit 0
+            fi
+            sleep 15
+          done
+          echo "el manager no quedó listo a tiempo"; docker compose logs wazuh.manager; exit 1
+
+      - name: Cargar reglas y correr simulaciones
+        run: |
+          make load-rules
+          sleep 20
+          make simulate SIM=todas
+          sleep 30
+          make verify SIM=todas
+
+      - name: Diagnóstico si algo falla
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Limpiar
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "irlab"
+dynamic = ["version"]
+description = "Laboratorio de respuesta a incidentes como código sobre Wazuh: simulaciones de telemetría, despliegue de reglas Sigma y playbooks ANCI"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Daniela Inostroza" }]
+keywords = ["wazuh", "incident-response", "blue-team", "sigma", "mitre-attack", "soc", "dfir"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Information Technology",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+dependencies = [
+  "pysigma>=2.0,<3",
+  "pyyaml>=6.0",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=5.0",
+  "ruff>=0.17,<0.18",
+  "mypy>=1.11",
+  "pre-commit>=3.8",
+  "types-requests",
+  "types-PyYAML",
+]
+verificacion = [
+  "detectionlab @ git+https://github.com/inostroza-Daniela/detection-engineering-lab.git@aafa11950cbb4bbfb71db61aa2c88a5d4b76657a",
+]
+
+[project.scripts]
+irlab = "irlab.cli:main"
+
+[project.urls]
+Repositorio = "https://github.com/inostroza-Daniela/incident-response-lab"
+"Repo de reglas" = "https://github.com/inostroza-Daniela/detection-engineering-lab"
+
+[tool.setuptools.dynamic]
+version = { attr = "irlab.__version__" }
+
+[tool.setuptools]
+packages = ["irlab", "simulations"]
+
+[tool.setuptools.package-dir]
+irlab = "src/irlab"
+simulations = "simulations"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "simulations", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF", "N", "PLC", "PLE", "PLW"]
+ignore = ["RUF001", "RUF002", "RUF003", "N818"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLW0603", "PLC0415"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["irlab", "simulations"]
+mypy_path = ["src", "."]
+strict = true
+warn_unused_ignores = true
+disallow_untyped_decorators = false
+# La telemetría son eventos JSON (dict[str, Any]); no exigimos parametrizar cada dict.
+disallow_any_generics = false
+
+[[tool.mypy.overrides]]
+module = ["sigma.*", "detectionlab.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "docker: pruebas de extremo a extremo que requieren Docker (se saltan si no está disponible)",
+]

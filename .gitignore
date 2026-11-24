@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Herramientas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Estado del laboratorio (se genera al correr)
+estado/
+site/
+reglas-wazuh/
+
+# Reglas descargadas del repo de detección (se obtienen con scripts/obtener-reglas.py)
+reglas-upstream/
+
+# Certificados del stack (se generan con `make certs`)
+config/wazuh/certs/
+
+# Secretos locales
+.env
+
+# Sistema
+.DS_Store
