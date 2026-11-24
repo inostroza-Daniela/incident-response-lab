@@ -1,0 +1,15 @@
+title: Fixture fallo de autenticacion
+id: 22222222-2222-2222-2222-222222222222
+name: fixture_fallo
+status: test
+logsource:
+  product: linux
+  service: sshd
+detection:
+  sel:
+    rule.groups|contains: 'authentication_failed'
+  condition: sel
+tags:
+  - attack.credential_access
+  - attack.t1110.001
+level: informational

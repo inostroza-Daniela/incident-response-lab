@@ -1,0 +1,17 @@
+title: Fixture fuerza bruta
+id: 33333333-3333-3333-3333-333333333333
+name: fixture_fuerza_bruta
+status: test
+correlation:
+  type: event_count
+  rules:
+    - fixture_fallo
+  group-by:
+    - data.srcip
+  timespan: 2m
+  condition:
+    gte: 5
+tags:
+  - attack.credential_access
+  - attack.t1110.001
+level: medium

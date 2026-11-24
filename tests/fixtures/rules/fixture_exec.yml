@@ -1,0 +1,20 @@
+title: Fixture ejecucion con netcat
+id: 11111111-1111-1111-1111-111111111111
+name: fixture_exec
+status: test
+logsource:
+  product: linux
+  service: auditd
+detection:
+  sel:
+    data.audit.exe|endswith:
+      - '/nc'
+      - '/ncat'
+    data.audit.execve.cmdline|contains: '-e'
+  filtro:
+    data.audit.exe|endswith: '/php'
+  condition: sel and not filtro
+tags:
+  - attack.execution
+  - attack.t1059.004
+level: high
