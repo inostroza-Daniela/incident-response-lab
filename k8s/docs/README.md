@@ -23,6 +23,33 @@ k8s/
 └── docs/README.md          # este documento
 ```
 
+## Quickstart
+
+Flujo mínimo desde la raíz del repositorio (entorno `dev`):
+
+```bash
+# 1. Generar certificados
+bash scripts/generar-certs.sh
+
+# 2. Crear el .env con las credenciales (requerido por kustomize)
+cp .env.example .env
+
+# 3. Previsualizar
+kubectl kustomize k8s/overlays/dev
+
+# 4. Desplegar
+kubectl apply -k k8s/overlays/dev
+
+# 5. Esperar a que termine el Job de inicialización
+kubectl wait --for=condition=complete job/init-telemetria -n irlab
+
+# 6. Simular
+kubectl exec -it deploy/operador -n irlab -- python -m irlab simulate todas
+
+# 7. Verificar
+kubectl exec -it deploy/operador -n irlab -- python -m irlab verify todas
+```
+
 ## Prerrequisitos
 
 - `kubectl` con soporte built-in de Kustomize, o el binario `kustomize` (v4+).
@@ -32,6 +59,10 @@ k8s/
 - `vm.max_map_count >= 262144` en los nodos donde corra el indexer:
   `sudo sysctl -w vm.max_map_count=262144`.
 - Certificados ya generados en `config/wazuh/certs/` (`bash scripts/generar-certs.sh`).
+- El archivo `.env` debe existir en la raíz del repositorio (crearlo con
+  `cp .env.example .env`): `kustomize` usa `secretGenerator envs: ../../.env` para
+  las credenciales, por lo que `kustomize build` (y `kubectl apply -k`) fallará si
+  `.env` no está presente.
 - Una `StorageClass` con `ReadWriteMany` para `irlab-telemetria` e `irlab-alertas`
   (p. ej. NFS). Las PVC de datos del indexer y manager son `ReadWriteOnce`.
 - La imagen `irlab-operador:0.1.0` disponible en los nodos (o en un registry; ver abajo).
@@ -87,6 +118,15 @@ La imagen del Compose se construye desde la raíz del repositorio:
 docker build -t irlab-operador:0.1.0 -f config/operador/Dockerfile .
 ```
 
+En clústeres locales (kind/minikube) la imagen **debe cargarse en los nodos** del
+clúster; si no, los pods quedarán en `ImagePullBackOff`:
+
+```bash
+kind load docker-image irlab-operador:0.1.0
+# or
+minikube image load irlab-operador:0.1.0
+```
+
 Para un clúster real, subirla a un registry y **actualizar la imagen en el
 overlay** (sin tocar la base), añadiendo por ejemplo a
 `k8s/overlays/<entorno>/kustomization.yaml`:
@@ -113,24 +153,31 @@ telemetría en `/var/log/lab/telemetria.jsonl` y alertas en `/alertas/alerts.jso
 
 ## Certificados
 
+Generar los certificados locales:
+
 ```bash
 bash scripts/generar-certs.sh
 ```
 
-Los diez archivos de `config/wazuh/certs/` están codificados en base64 **reales**
-en `k8s/base/secret-certs.yaml` (uno por nombre de archivo). Si se regeneran los
-certificados hay que regenerar también el Secret, p. ej.:
+Esto crea 10 archivos en `config/wazuh/certs/` (`.pem` y `.key`). Ese directorio está en `.gitignore`, por lo que **no se commitea** material de llaves privadas.
 
-```bash
-for f in config/wazuh/certs/*; do
-  printf '  %s: %s\n' "$(basename "$f")" "$(base64 -w0 "$f")"
-done
+El `kustomization.yaml` de base usa `secretGenerator` con `files:` para leer esos 10 archivos locales y crear el Secret `irlab-certs` en el clúster:
+
+```yaml
+secretGenerator:
+  - name: irlab-certs
+    files:
+      - ../../config/wazuh/certs/root-ca.pem
+      # ... (resto de certs y llaves)
+    options:
+      disableNameSuffixHash: true
 ```
 
-y reemplazar el bloque `data:` de `secret-certs.yaml`. Las credenciales por
-defecto de `.env.example` están en `secret-credentials.yaml`; si se cambian,
-actualizar también los hashes de `internal_users.yml` (`make hash-pass`) y su
-ConfigMap.
+Los certificados ya incluyen SAN con los nombres con punto (`wazuh.indexer`, `wazuh.manager`), pero los Servicios de Kubernetes usan nombres con guion (`wazuh-indexer`, `wazuh-manager`). Por eso el manager usa `FILEBEAT_SSL_VERIFICATION_MODE: "certificate"` (valida la CA, no el hostname), para que no falle la conexión TLS entre componentes.
+
+Si se regeneran los certificados, el Secret se recrea automáticamente al volver a aplicar el overlay (Kustomize detecta el cambio de contenido de los archivos). No es necesario editar ningún manifest.
+
+Las credenciales por defecto de `.env.example` se inyectan en el clúster mediante `secretGenerator envs: ../../.env` (crear `.env` con `cp .env.example .env` antes de construir). Si se cambian las contraseñas, actualizar también los hashes de `internal_users.yml` (`make hash-pass`) y su ConfigMap.
 
 ## Acceso al dashboard
 
@@ -171,6 +218,19 @@ través del host del Ingress (con autenticación básica).
    # y reiniciar el manager:
    kubectl rollout restart deploy/wazuh-manager -n irlab
    ```
+
+   Helper concreto (equivalente a `make convert` + `make load-rules`) para
+   generar el ConfigMap real de reglas y reiniciar el manager en un solo bloque:
+
+    ```bash
+    POD=$(kubectl get pod -n irlab -l app=operador -o jsonpath='{.items[0].metadata.name}')
+    kubectl exec -n irlab "$POD" -- python -m irlab convert
+    kubectl create configmap irlab-local-rules-real --from-file=local_rules.xml=reglas-wazuh/local_rules.xml -n irlab --dry-run=client -o yaml | kubectl apply -f -
+    kubectl rollout restart deploy/wazuh-manager -n irlab
+    ```
+
+   Recuerda cambiar `configMap.name` del volumen `local-rules` a
+   `irlab-local-rules-real` en `deployment-manager.yaml` antes de reiniciar.
 
 3. **Imágenes fijadas:** Wazuh `4.14.9` en indexer, manager, dashboard, Job y
    agente; `irlab-operador:0.1.0` para el operador. No usar `latest`.

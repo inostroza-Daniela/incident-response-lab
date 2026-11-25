@@ -29,6 +29,7 @@ config/wazuh/certs/
 
 # Secretos locales
 .env
+k8s/base/secrets/
 
 # Sistema
 .DS_Store

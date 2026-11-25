@@ -44,7 +44,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: INDEXER_URL
-              value: "https://wazuh.indexer:9200"
+              value: "https://wazuh-indexer:9200"
             - name: INDEXER_USERNAME
               value: "admin"
             - name: INDEXER_PASSWORD
@@ -53,7 +53,7 @@ spec:
                   name: irlab-credentials
                   key: INDEXER_PASSWORD
             - name: FILEBEAT_SSL_VERIFICATION_MODE
-              value: "full"
+              value: "certificate"
             - name: SSL_CERTIFICATE_AUTHORITIES
               value: "/etc/ssl/root-ca.pem"
             - name: SSL_CERTIFICATE

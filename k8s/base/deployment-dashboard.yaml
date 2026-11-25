@@ -32,7 +32,7 @@ spec:
                   name: irlab-credentials
                   key: DASHBOARD_PASSWORD
             - name: WAZUH_API_URL
-              value: "https://wazuh.manager"
+              value: "https://wazuh-manager"
             - name: API_USERNAME
               value: "wazuh-wui"
             - name: API_PASSWORD
