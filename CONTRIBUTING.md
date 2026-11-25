@@ -14,7 +14,7 @@ pre-commit install
 
 - `make lint` — ruff (lint + formato) y mypy en modo estricto sin errores.
 - `make test` — la suite completa en verde.
-- Si agregás una simulación: registrala en `simulations/`, sumá su entrada al
+- Si agregas una simulación: registrala en `simulations/`, sumá su entrada al
   catálogo (`src/irlab/catalogo.py`) y creá su playbook en `playbooks/`. Los tests
   de consistencia exigen que cada simulación tenga regla y playbook.
 - Nada apunta fuera de la red del laboratorio: las simulaciones solo generan
