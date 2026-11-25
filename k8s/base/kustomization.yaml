@@ -10,8 +10,6 @@ resources:
   - configmap-dashboard-wazuh.yml
   - configmap-agent-ossec.yml
   - configmap-auditd-rules.yml
-  - secret-certs.yaml
-  - secret-credentials.yaml
   - pvc-indexer.yaml
   - pvc-manager.yaml
   - pvc-telemetria.yaml
@@ -25,3 +23,23 @@ resources:
   - service-indexer.yaml
   - service-manager.yaml
   - service-dashboard.yaml
+secretGenerator:
+  - name: irlab-certs
+    files:
+      - secrets/config/wazuh/certs/root-ca.pem
+      - secrets/config/wazuh/certs/wazuh.indexer.pem
+      - secrets/config/wazuh/certs/wazuh.manager.pem
+      - secrets/config/wazuh/certs/wazuh.dashboard.pem
+      - secrets/config/wazuh/certs/admin.pem
+      - secrets/config/wazuh/certs/root-ca.key
+      - secrets/config/wazuh/certs/wazuh.indexer-key.pem
+      - secrets/config/wazuh/certs/wazuh.manager-key.pem
+      - secrets/config/wazuh/certs/wazuh.dashboard-key.pem
+      - secrets/config/wazuh/certs/admin-key.pem
+    options:
+      disableNameSuffixHash: true
+  - name: irlab-credentials
+    envs:
+      - secrets/.env
+    options:
+      disableNameSuffixHash: true

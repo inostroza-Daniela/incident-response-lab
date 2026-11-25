@@ -11,7 +11,7 @@ recursos viven en el namespace `irlab` y las imágenes están fijadas a `4.14.9`
 | Namespace | `namespace.yaml` | `irlab`, etiquetado `name: irlab`. |
 | Red | `networkpolicy.yaml` | Default-deny de ingress/egress + Allow-list interna (DNS a `kube-system` incluido). |
 | Configuración | `configmap-*.yml` | Copia literal de `config/wazuh/**` y `config/auditd/irlab.rules`. |
-| Secretos | `secret-certs.yaml`, `secret-credentials.yaml` | Certificados reales codificados en base64 y credenciales por defecto de `.env.example`. |
+| Secretos | `secretGenerator` en `kustomization.yaml` raíz | Los secrets `irlab-certs` e `irlab-credentials` se generan desde archivos locales (`config/wazuh/certs/*` y `.env`) que no están versionados. |
 | Almacenamiento | `pvc-*.yaml` | Datos del indexer y manager (RWO), telemetría y alertas (RWX). |
 | Carga de trabajo | `deployment-*.yaml`, `job-init-telemetria.yaml` | Indexer, manager, dashboard, agente, operador y el Job inicial. |
 | Servicios | `service-*.yaml` | ClusterIP internos para indexer (9200), manager (1514/55000) y dashboard (5601). |

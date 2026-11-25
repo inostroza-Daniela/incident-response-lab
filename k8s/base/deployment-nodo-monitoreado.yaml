@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: WAZUH_MANAGER
-              value: "wazuh.manager"
+              value: "wazuh-manager"
             - name: WAZUH_AGENT_NAME
               value: "nodo-monitoreado"
             - name: WAZUH_AGENT_GROUP

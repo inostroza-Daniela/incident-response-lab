@@ -12,7 +12,7 @@ data:
     <ossec_config>
       <client>
         <server>
-          <address>wazuh.manager</address>
+          <address>wazuh-manager</address>
           <port>1514</port>
           <protocol>tcp</protocol>
         </server>
