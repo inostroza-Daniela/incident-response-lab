@@ -1,0 +1,18 @@
+# Contenido copiado literalmente de config/wazuh/dashboard/wazuh.yml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: irlab-dashboard-wazuh-config
+  namespace: irlab
+  labels:
+    app: wazuh-dashboard
+    app.kubernetes.io/part-of: incident-response-lab
+data:
+  wazuh.yml: |
+    hosts:
+      - default:
+          url: https://wazuh-manager
+          port: 55000
+          username: wazuh-wui
+          password: LabIrlabApi2026+
+          run_as: false

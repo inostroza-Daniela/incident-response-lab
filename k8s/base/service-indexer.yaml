@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-indexer
+  namespace: irlab
+  labels:
+    app: wazuh-indexer
+    app.kubernetes.io/part-of: incident-response-lab
+spec:
+  type: ClusterIP
+  selector:
+    app: wazuh-indexer
+  ports:
+    - name: http
+      protocol: TCP
+      port: 9200
+      targetPort: 9200

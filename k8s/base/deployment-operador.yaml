@@ -1,0 +1,85 @@
+# /lab es un emptyDir: el código se siembra desde la imagen y el resto del repo
+# (site/, reglas/, playbooks/, estado/) debe sincronizarse antes de operar.
+# Ver docs/README.md ("Sincronizar el código del operador").
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operador
+  namespace: irlab
+  labels:
+    app: operador
+    app.kubernetes.io/name: incident-response-lab
+    app.kubernetes.io/component: operador
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: operador
+  template:
+    metadata:
+      labels:
+        app: operador
+        app.kubernetes.io/name: incident-response-lab
+        app.kubernetes.io/component: operador
+    spec:
+      initContainers:
+        - name: seed-source
+          image: irlab-operador:0.1.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - "cp -a /opt/irlab/src /opt/irlab/simulations /opt/irlab/pyproject.toml /opt/irlab/README.md /lab/ && mkdir -p /lab/estado /lab/site /lab/reglas-wazuh /lab/reglas-upstream/rules"
+          volumeMounts:
+            - name: lab-src
+              mountPath: /lab
+      containers:
+        - name: operador
+          image: irlab-operador:0.1.0
+          imagePullPolicy: IfNotPresent
+          workingDir: /lab
+          command:
+            - sleep
+            - infinity
+          env:
+            - name: PYTHONPATH
+              value: "/lab/src:/lab"
+            - name: IRLAB_RAIZ
+              value: "/lab"
+            - name: IRLAB_TELEMETRIA
+              value: "/var/log/lab/telemetria.jsonl"
+            - name: IRLAB_CORRIDAS
+              value: "/lab/estado/corridas.jsonl"
+            - name: IRLAB_ALERTAS
+              value: "/alertas/alerts.json"
+            - name: IRLAB_REGLAS
+              value: "/lab/reglas-upstream/rules"
+            - name: IRLAB_REGLAS_WAZUH
+              value: "/lab/reglas-wazuh"
+            - name: IRLAB_SITIO
+              value: "/lab/site"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: lab-src
+              mountPath: /lab
+            - name: telemetria
+              mountPath: /var/log/lab
+            - name: alertas
+              mountPath: /alertas
+              readOnly: true
+      volumes:
+        - name: lab-src
+          emptyDir: {}
+        - name: telemetria
+          persistentVolumeClaim:
+            claimName: irlab-telemetria
+        - name: alertas
+          persistentVolumeClaim:
+            claimName: irlab-alertas

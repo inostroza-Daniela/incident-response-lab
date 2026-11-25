@@ -1,0 +1,57 @@
+# Staging: recursos estándar (iguales a la base), heap 1g/1g del indexer.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-indexer
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-indexer
+          env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-manager
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-manager
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-dashboard
+  namespace: irlab
+spec:
+  template:
+    spec:
+      containers:
+        - name: wazuh-dashboard
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

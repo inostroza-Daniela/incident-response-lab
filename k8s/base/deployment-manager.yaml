@@ -1,0 +1,117 @@
+# Reglas locales: placeholder. Sustituir el ConfigMap con el resultado de
+# `irlab convert` (reglas-wazuh/local_rules.xml) antes de usar el laboratorio.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: irlab-local-rules-placeholder
+  namespace: irlab
+  labels:
+    app: wazuh-manager
+    app.kubernetes.io/part-of: incident-response-lab
+data:
+  local_rules.xml: |
+    <!-- PLACEHOLDER: reemplazar con reglas-wazuh/local_rules.xml generado por `irlab convert`. -->
+    <group name="irlab,">
+      <!-- Sin reglas cargadas todavía: ver docs/README.md y Makefile load-rules. -->
+    </group>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-manager
+  namespace: irlab
+  labels:
+    app: wazuh-manager
+    app.kubernetes.io/name: incident-response-lab
+    app.kubernetes.io/component: manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wazuh-manager
+  template:
+    metadata:
+      labels:
+        app: wazuh-manager
+        app.kubernetes.io/name: incident-response-lab
+        app.kubernetes.io/component: manager
+    spec:
+      containers:
+        - name: wazuh-manager
+          image: wazuh/wazuh-manager:4.14.9
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: INDEXER_URL
+              value: "https://wazuh-indexer:9200"
+            - name: INDEXER_USERNAME
+              value: "admin"
+            - name: INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: irlab-credentials
+                  key: INDEXER_PASSWORD
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: "certificate"
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: "/etc/ssl/root-ca.pem"
+            - name: SSL_CERTIFICATE
+              value: "/etc/ssl/filebeat.pem"
+            - name: SSL_KEY
+              value: "/etc/ssl/filebeat.key"
+            - name: API_USERNAME
+              value: "wazuh-wui"
+            - name: API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: irlab-credentials
+                  key: API_PASSWORD
+          ports:
+            - name: agents
+              containerPort: 1514
+              protocol: TCP
+            - name: api
+              containerPort: 55000
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: manager-data
+              mountPath: /var/ossec/data
+            - name: alertas
+              mountPath: /var/ossec/logs/alerts
+            - name: alertas
+              mountPath: /alertas
+            - name: certs
+              mountPath: /etc/ssl
+              readOnly: true
+            - name: local-rules
+              mountPath: /var/ossec/etc/rules/local_rules.xml
+              subPath: local_rules.xml
+              readOnly: true
+      volumes:
+        - name: manager-data
+          persistentVolumeClaim:
+            claimName: irlab-manager-data
+        - name: alertas
+          persistentVolumeClaim:
+            claimName: irlab-alertas
+        - name: certs
+          secret:
+            secretName: irlab-certs
+            items:
+              - key: root-ca.pem
+                path: root-ca.pem
+              - key: wazuh.manager.pem
+                path: filebeat.pem
+              - key: wazuh.manager-key.pem
+                path: filebeat.key
+        - name: local-rules
+          configMap:
+            name: irlab-local-rules-placeholder

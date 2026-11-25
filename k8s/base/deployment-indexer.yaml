@@ -1,0 +1,90 @@
+# Kubernetes no permite fijar ulimits en el PodSpec: memlock=-1 y nofile=65536
+# se documentan aquí y se aproximan con la capability IPC_LOCK (ver docs/README.md).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-indexer
+  namespace: irlab
+  labels:
+    app: wazuh-indexer
+    app.kubernetes.io/name: incident-response-lab
+    app.kubernetes.io/component: indexer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wazuh-indexer
+  template:
+    metadata:
+      labels:
+        app: wazuh-indexer
+        app.kubernetes.io/name: incident-response-lab
+        app.kubernetes.io/component: indexer
+      annotations:
+        irlab.local/ulimits: "memlock=-1:-1,nofile=65536:65536"
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: wazuh-indexer
+          image: wazuh/wazuh-indexer:4.14.9
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+          ports:
+            - name: http
+              containerPort: 9200
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - IPC_LOCK
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: indexer-data
+              mountPath: /var/lib/wazuh-indexer
+            - name: certs
+              mountPath: /usr/share/wazuh-indexer/config/certs
+              readOnly: true
+            - name: indexer-config
+              mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
+              subPath: wazuh.indexer.yml
+              readOnly: true
+            - name: internal-users
+              mountPath: /usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml
+              subPath: internal_users.yml
+              readOnly: true
+      volumes:
+        - name: indexer-data
+          persistentVolumeClaim:
+            claimName: irlab-indexer-data
+        - name: certs
+          secret:
+            secretName: irlab-certs
+            items:
+              - key: wazuh.indexer.pem
+                path: wazuh.indexer.pem
+              - key: wazuh.indexer-key.pem
+                path: wazuh.indexer.key
+              - key: admin.pem
+                path: admin.pem
+              - key: admin-key.pem
+                path: admin-key.pem
+              - key: root-ca.pem
+                path: root-ca.pem
+        - name: indexer-config
+          configMap:
+            name: irlab-indexer-config
+        - name: internal-users
+          configMap:
+            name: irlab-internal-users

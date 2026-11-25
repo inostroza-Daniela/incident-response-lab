@@ -1,0 +1,29 @@
+# Con replicas=1, minAvailable=1 bloquea el drenaje voluntario del nodo:
+# es la elección deliberada para no perder el único indexer/manager del lab.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wazuh-indexer-pdb
+  namespace: irlab
+  labels:
+    app: wazuh-indexer
+    app.kubernetes.io/part-of: incident-response-lab
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: wazuh-indexer
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wazuh-manager-pdb
+  namespace: irlab
+  labels:
+    app: wazuh-manager
+    app.kubernetes.io/part-of: incident-response-lab
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: wazuh-manager
