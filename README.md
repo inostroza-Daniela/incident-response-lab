@@ -28,7 +28,7 @@ Las reglas propias (`[irlab] ...`) disparando en tiempo real sobre la telemetrí
 
 ![Eventos de detección en el dashboard, con las reglas irlab, su nivel y su ID](docs/img/dashboard-eventos.png)
 
-📹 **Recorrido en video** (qué es, para qué sirve y cómo funciona): [ver el video explicativo](docs/media/incident-response-lab.mp4).
+ **Recorrido en video** (qué es, para qué sirve y cómo funciona): [ver el video explicativo](docs/media/incident-response-lab.mp4).
 
 ## Arquitectura
 
@@ -110,6 +110,10 @@ depender de Docker.
 - Soporte de Windows/Sysmon (hoy el laboratorio es Linux primero).
 - Ejecución opcional de simulaciones benignas directamente sobre el nodo
   monitoreado para producir telemetría auditd nativa.
+- Distribuir los timestamps de la telemetría en una ventana de tiempo realista.
+  Hoy las simulaciones se corren en bloque y el manager fecha cada alerta con su
+  hora de ingesta, así que las alertas quedan con una hora muy parecida; en un
+  despliegue real llegarían a medida que ocurren los ataques.
 
 ## Reglas de detección
 
